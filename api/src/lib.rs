@@ -4,8 +4,12 @@ pub use crate::game::*;
 mod board;
 pub use crate::board::*;
 
-pub fn game() -> Game {
+pub fn default_game() -> Game {
     Game::new()
+}
+
+pub fn fen_game(fen: &str) -> Result<Game, FenParseError> {
+    Game::from_fen(fen)
 }
 
 #[cfg(test)]

@@ -1,78 +1,90 @@
 pub use crate::board::*;
 
-#[derive(Debug, Clone)]
-pub struct PlyError;
+mod fen;
+pub use fen::*;
 
-impl std::fmt::Display for PlyError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(formatter, "invalid ply")
-    }
-}
-
-pub enum Player {
-    White,
-    Black,
-}
-
-pub struct Ply {
-    pub f: Pos, // f: from
-    pub t: Pos, // t: to
-}
+mod ply_gen;
+pub use ply_gen::*;
 
 pub struct Game {
     board: Board,
-    player: Player,
+    player: Color,
     plys: Vec<Ply>,
     en_passant: Option<usize>,
 }
 
 impl Game {
     pub fn new() -> Self {
-        Self {
+        let mut game = Self {
             board: Board::new(),
-            player: Player::White,
+            player: Color::White,
             plys: Vec::new(),
             en_passant: None,
+        };
+
+        game.gen_plys();
+
+        game
+    }
+
+    pub fn renew(&mut self) {
+        let new_game = Self::new();
+
+        self.board = new_game.board;
+        self.player = new_game.player;
+        self.plys = new_game.plys;
+        self.en_passant = new_game.en_passant;
+    }
+
+    pub fn ply(&mut self, origin: Pos, destination: Pos) -> Result<(), PlyError> {
+        let origin_index = Board::get_index(origin);
+        let destination_index = Board::get_index(destination);
+        let ply = Ply {
+            origin: origin_index,
+            destination: destination_index,
+        };
+
+        if !(self.plys.contains(&ply)) {
+            println!("Invalid Ply: {}", ply.to_string());
+            return Err(PlyError::InvalidPly);
         }
-    }
 
-    pub fn ply() {
-        
-    }
+        let tile = match self.board.rem_tile(origin_index) {
+            Ok(t) => t,
+            Err(_) => return Err(PlyError::Unknown),
+        };
 
-    pub fn get_plys(&self) {
-        match self.player {
-            Player::White => for (index, tile) in self.board.get_tiles().iter().enumerate() {
-                match tile {
-                    tile!(P) => (),
-                    tile!(N) => self.knight_plys(index),
-                    tile!(B) => (),
-                    tile!(R) => (),
-                    tile!(Q) => (),
-                    tile!(K) => (),
-                    _ => (),
-                }
-            }
-            Player::Black => for (index, tile) in self.board.get_tiles().iter().enumerate() {
-                match tile {
-                    tile!(p) => (),
-                    tile!(b) => (),
-                    tile!(r) => (),
-                    tile!(q) => (),
-                    tile!(k) => (),
-                    tile!(n) => (),
-                    _ => (),
-                }
-            }
+        match self.board.set_tile(destination_index, tile) {
+            Ok(_) => (),
+            Err(_) => return Err(PlyError::Unknown),
         }
+
+        self.gen_plys();
+
+        self.player = match self.player {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        };
+
+        self.gen_plys();
+
+        return Ok(());
     }
 
-    pub fn get_player(&self) -> &Player {
+    pub fn ply_str(&mut self, &str) -> Result<(), PlyError> {
+
+    }
+
+    pub fn get_plys(&self) -> &Vec<Ply> {
+        &self.plys
+    }
+
+    pub fn get_player(&self) -> &Color {
         &self.player
     }
 
     pub fn get_tile(&self, pos: Pos) -> Option<&Tile> {
-        match self.board.get_tile(Self::get_index(pos)?)? {
+        match self.board.get_tile(Board::get_index(pos))? {
             tile!(_) => None,
             x => Some(x),
         }
@@ -86,87 +98,83 @@ impl Game {
         todo!();
     }
 
-    // Returns the board position as an index.
-    fn get_index(pos: Pos) -> Option<usize> {
-        Some((1 + pos.x + 20 + pos.y * 10) as usize) 
-    }
+    fn get_pos_from_str(str: &str) -> Result<(Option<Pos>, Option<Pos>), ()> {
+        let pos_pair = (None, None);
+        for char in str.to_lowercase().chars() {
+            match char {
 
-    fn pawn_plys(index: usize, origin: usize, player: Player) {
-        todo!();
-        // Push
-        // Double Push
-        // Capture
-        // Promotion
-        // En passant
-        /*  . +20 .
-         * +9 +10+11
-         *  .  O  .
-         *  .  .  .
-         */
-        /*  .  .  .
-         *  .  O  .
-         * -11-10-9
-         *  . -20 .
-         */
-    }
-
-    fn bishop_plys() {
-        todo!();
-        // Step
-        // Iterate
-        /* +9  . +11
-         *  .  O  .
-         * -11 . -9
-         */
-        loop {
-            
-        }
-    }
-
-    fn knight_plys(&self, origin: usize) {
-        let knight_delta = [-21, -19, -12, -8, 8, 12, 19, 21];
-        // Ply
-        /*  . +19 . +21 .
-         * +8  .  .  . +12
-         *  .  .  O  .  .
-         * -12 .  .  . -8
-         *  . -21 . -19 .
-         */
-        for index in knight_delta.iter().map(|i| i + origin as isize) {
-            match self.board.get_tile(index as usize) {
-                _ => (),
+                _ => return Err(()), 
             }
         }
 
+        Ok(pos_pair)
     }
+}
 
-    fn rook_plys(index: usize, player: Player) {
-        todo!();
-        // Step
-        // Iterate
-        /*  . +10 .
-         * -1  O +1
-         *  . -10 .
-         */
+
+impl std::fmt::Debug for Game {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut str = String::new();
+
+        // Board.
+        for rank in (0..=7).rev() {
+            str.push_str("| ");
+            for file in 0..=7 {
+                let pos = Pos {
+                    rank,
+                    file,
+                };
+
+                let tile = match self.get_tile(pos) {
+                    Some(t) => match t {
+                        tile!(P) => "P ",
+                        tile!(N) => "N ",
+                        tile!(B) => "B ",
+                        tile!(R) => "R ",
+                        tile!(Q) => "Q ",
+                        tile!(K) => "K ",
+                        tile!(p) => "p ",
+                        tile!(n) => "n ",
+                        tile!(b) => "b ",
+                        tile!(r) => "r ",
+                        tile!(q) => "q ",
+                        tile!(k) => "k ",
+                        tile!(.) => ". ",
+                        _ => "",
+                    },
+                    None => "",
+                };
+
+                str.push_str(tile);
+            }
+
+            str.push_str("|\n");
+        }
+
+        // Plys.
+        for ply in self.plys.as_slice() {
+            let mut string = ply.to_string();
+            string.push('\n');
+            str.push_str(string.as_str());
+        }
+
+        write!(f, "{}", str)
     }
+}
 
-    fn queen_plys() {
-        todo!();
-        // rook_plys()
-        // bishop_plys()
-        /* +9 +10+11
-         * -1  O +1
-         * -11-10-9
-         */
-    }
 
-    fn king_plys() {
-        todo!();
-        // Step
-        // Castling
-        /* +9 +10+11
-         * -1  O +1
-         * -11-10-9
-         */
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn board() {
+        let mut game = Game::from_fen("8/8/8/pppppppp/PPPPPPPP/8/8/8 w KQkq - 0 1").unwrap();
+
+        game.ply( Pos {
+
+        });
+
+        println!("{:?}", game);
     }
 }
