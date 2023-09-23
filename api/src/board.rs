@@ -44,6 +44,7 @@ pub(crate) use tile;
 const BOARD_WIDTH: usize = 10;
 const BOARD_HEIGHT: usize = 12;
 
+/// Represents an error occuring in the back-end board representation.
 #[derive(Debug, Clone)]
 pub enum BoardError {
     OutOfBounds(Pos, usize)
@@ -55,12 +56,31 @@ impl std::fmt::Display for BoardError {
     }
 }
 
+/// Represents both piece colors (see [`Tile`]) and player colors (see [`Game`]).
+/// 
+/// [`Game`]: `super::Game`
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Color {
     White,
     Black,
 }
 
+impl std::fmt::Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let string = match self {
+            Color::White => "White",
+            Color::Black => "Black",
+        };
+
+        write!(f, "{string}")
+    }
+}
+
+/// Represents tiles on the board.
+/// 
+/// Note, sentinel tiles are only used internally. 
+/// 
+/// All pieces have a [`Color`].
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Tile {
     Pawn(Color),
@@ -96,23 +116,31 @@ impl std::fmt::Display for Tile {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+/// Represents zero-indexed positions on the board.
+/// 
+/// Positions are used commonly used when interfacing with the user.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Pos {
     pub rank: i32,
     pub file: i32,
 }
 
+
+/// Represents the chessboard as a one dimensional array.
 #[derive(Debug)]
 pub struct Board {
     tiles: [Tile; BOARD_WIDTH * BOARD_HEIGHT],
 }
 
 impl Board {
-    pub fn get_tile(&self, index: usize) -> Option<&Tile> {
+    /// Returns the tile at a given index.
+    pub(crate) fn get_tile(&self, index: usize) -> Option<&Tile> {
         self.tiles.get(index) 
     }
 
-    pub fn set_tile(&mut self, index: usize, piece: Tile) -> Result<(), BoardError> {
+    /// Sets a tile value at a given index, 
+    /// or produces an error if the index is out of bounds, or the tile is a sentinel value.
+    pub(crate) fn set_tile(&mut self, index: usize, piece: Tile) -> Result<(), BoardError> {
         match self.tiles.get_mut(index) {
             Some(tile) => match piece {
                 // Sentinel tiles cannot be set.
@@ -123,7 +151,9 @@ impl Board {
         }
     }
 
-    pub fn rem_tile(&mut self, index: usize) -> Result<Tile, BoardError> {
+    /// Sets a tile to empty and returns the removed tile, 
+    /// or produces an error if the index is out of bounds or the tile is a sentinel value.
+    pub(crate) fn rem_tile(&mut self, index: usize) -> Result<Tile, BoardError> {
         match self.tiles.get_mut(index) {
             Some(tile) => match tile {
                 // Sentinel tiles cannot be removed.
@@ -138,11 +168,13 @@ impl Board {
         }
     }
 
-    pub fn get_tiles(&self) -> &[Tile; BOARD_WIDTH * BOARD_HEIGHT] {
+    /// Returns all tiles.
+    pub(crate) fn get_tiles(&self) -> &[Tile; BOARD_WIDTH * BOARD_HEIGHT] {
         &self.tiles
     }
 
-    pub fn new() -> Self {
+    /// Creates an empty board surrounded by sentitnel tiles.
+    pub(crate) fn new() -> Self {
         let mut board = Self {
             tiles: [tile!(.); BOARD_WIDTH * BOARD_HEIGHT]
         };
@@ -156,16 +188,17 @@ impl Board {
         board
     }
 
-    pub fn empty(&mut self) {
+    /// Empties the board.
+    pub(crate) fn empty(&mut self) {
         self.tiles = Self::new().tiles;
     }
 
-    // Returns a position as an index.
+    /// Returns the tile index for a given position.
     pub(crate) fn get_index(pos: Pos) -> usize {
         (1 + pos.file + 20 + pos.rank * 10) as usize
     }
 
-    // Returns an as a position.
+    /// Returns the tile position for a given index.
     pub(crate) fn get_pos(index: usize) -> Pos {
         Pos { 
             rank: (index as i32 - 21) / 10,
@@ -173,6 +206,9 @@ impl Board {
         }
     }
 
+    /// Returns the algebraic notation, in capital letters, for a given index.
+    /// 
+    /// Sentinel values are treated as spaces.
     pub(crate) fn index_to_string(index: usize) -> String {
         let mut string = String::new();
 
@@ -205,89 +241,6 @@ impl Board {
         
         string
     }
-
-    /* 
-    pub fn new() -> Self {
-        Self {
-            tiles: [
-                // The ranks are reversed to make sure the coordinates are correct.
-                s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_),
-                s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_),
-                s!(_), s!(R), s!(N), s!(B), s!(Q), s!(K), s!(B), s!(N), s!(R), s!(_),
-                s!(_), s!(P), s!(P), s!(P), s!(P), s!(P), s!(P), s!(P), s!(P), s!(_),
-                s!(_), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(_),
-                s!(_), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(_),
-                s!(_), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(_),
-                s!(_), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(.), s!(_),
-                s!(_), s!(p), s!(p), s!(p), s!(p), s!(p), s!(p), s!(p), s!(p), s!(_),
-                s!(_), s!(r), s!(n), s!(b), s!(q), s!(k), s!(b), s!(n), s!(r), s!(_),
-                s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_),
-                s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_), s!(_),
-            ],
-        }
-    }
-    */
-
-
-    /*
-    pub fn print_tiles(&self) {
-        let mut str = String::new();
-
-        for tile in self.tiles.iter().enumerate() {
-            str.push_str(match tile.1 {
-                Tile::WhitePawn     => "P ",
-                Tile::WhiteKnight   => "N ",
-                Tile::WhiteBishop   => "B ",
-                Tile::WhiteRook     => "R ",
-                Tile::WhiteQueen    => "Q ",
-                Tile::WhiteKing     => "K ",
-                Tile::BlackPawn     => "p ",
-                Tile::BlackKnight   => "n ",
-                Tile::BlackBishop   => "b ",
-                Tile::BlackRook     => "r ",
-                Tile::BlackQueen    => "q ",
-                Tile::BlackKing     => "k ",
-                Tile::Empty         => ". ",
-                Tile::Sentinel      => "",
-            });
-
-            if tile.0 % 10 == 0 {
-                str.push('@')
-            }
-        }
-
-
-        for rank in str.rsplit('@') {
-            println!("{rank}");
-        }
-    }
-
-    pub fn print_tile(&self, pos: Pos) {
-        let mut str = String::new();
-
-        match self.get_tile(pos) {
-            Some(tile) => match tile {
-                Tile::WhitePawn     => str.push('P'),
-                Tile::WhiteKnight   => str.push('N'),
-                Tile::WhiteBishop   => str.push('B'),
-                Tile::WhiteRook     => str.push('R'),
-                Tile::WhiteQueen    => str.push('Q'),
-                Tile::WhiteKing     => str.push('K'),
-                Tile::BlackPawn     => str.push('p'),
-                Tile::BlackKnight   => str.push('n'),
-                Tile::BlackBishop   => str.push('b'),
-                Tile::BlackRook     => str.push('r'),
-                Tile::BlackQueen    => str.push('q'),
-                Tile::BlackKing     => str.push('k'),
-                Tile::Empty         => str.push('.'),
-                Tile::Sentinel      => (),
-            }
-            None => (),
-        };
-
-        println!("{str}");
-    }
-    */
 }
 
 /* TESTING

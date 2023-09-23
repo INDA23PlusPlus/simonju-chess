@@ -6,6 +6,10 @@ pub use fen::*;
 mod ply_gen;
 pub use ply_gen::*;
 
+
+/// Represents a game of chess.
+/// 
+/// All user interaction should be handled through Game objects.
 pub struct Game {
     board: Board,
     player: Color,
@@ -14,7 +18,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let mut game = Self {
             board: Board::new(),
             player: Color::White,
@@ -27,7 +31,7 @@ impl Game {
         game
     }
 
-    pub fn renew(&mut self) {
+    pub(crate) fn renew(&mut self) {
         let new_game = Self::new();
 
         self.board = new_game.board;
@@ -45,7 +49,7 @@ impl Game {
         };
 
         if !(self.plys.contains(&ply)) {
-            println!("Invalid Ply: {}", ply.to_string());
+            println!("Invalid Ply: {}", ply);
             return Err(PlyError::InvalidPly);
         }
 
@@ -71,43 +75,166 @@ impl Game {
         return Ok(());
     }
 
-    pub fn ply_str(&mut self, &str) -> Result<(), PlyError> {
-
+    pub fn ply_str(&mut self, str: &str) -> Result<(), PlyError> {
+        let ply = Self::get_pos_from_str(str);
+        match ply {
+            Some(x) => {
+                match x.0 {
+                    Some(origin) => {
+                        match x.1 {
+                            Some(destination) => {
+                                self.ply(origin, destination)
+                            },
+                            None => Err(PlyError::InvalidPly),
+                        }
+                    },
+                    None => Err(PlyError::InvalidPly),
+                }
+            }, 
+            None => Err(PlyError::InvalidPly),
+        }
     }
 
     pub fn get_plys(&self) -> &Vec<Ply> {
         &self.plys
     }
 
+    pub fn get_plys_from_pos(&self, pos: Pos) -> Vec<&Ply> {
+        let mut plys = Vec::new();
+
+        for ply in &self.plys {
+            if Board::get_pos(ply.origin) == pos {
+                plys.push(ply)
+            }
+        }
+
+        plys
+    }
+
+    pub fn get_plys_from_str(&self, str: &str) -> Vec<&Ply> {
+        self.get_plys_from_pos(match Self::get_pos_from_str(str) {
+            Some(pos_pos) => match pos_pos.0 {
+                Some(pos) => pos,
+                None => return vec![],
+            },
+            None => return vec![],
+        })
+    }
+
     pub fn get_player(&self) -> &Color {
         &self.player
     }
 
-    pub fn get_tile(&self, pos: Pos) -> Option<&Tile> {
+    pub fn get_tile_from_pos(&self, pos: Pos) -> Option<&Tile> {
         match self.board.get_tile(Board::get_index(pos))? {
             tile!(_) => None,
             x => Some(x),
         }
     }
 
+    pub fn get_tile_from_str(&self, str: &str) -> Option<&Tile> {
+        self.get_tile_from_pos(Self::get_pos_from_str(str)?.0?)
+    }
+
     pub fn get_board_1d(&self) -> [&Tile; 64] {
-        todo!();
-    }
-    
-    pub fn get_board_2d(&self) -> [[&Tile; 8]; 8] {
-        todo!();
-    }
+        let mut board = [&Tile::Empty; 64];
 
-    fn get_pos_from_str(str: &str) -> Result<(Option<Pos>, Option<Pos>), ()> {
-        let pos_pair = (None, None);
-        for char in str.to_lowercase().chars() {
-            match char {
-
-                _ => return Err(()), 
+        let index = 0;
+        for tile in self.board.get_tiles() {
+            match tile {
+                tile!(_) => (),
+                _ => board[index] = tile,
             }
         }
 
-        Ok(pos_pair)
+        board
+    }
+    
+    /// 
+    pub fn get_board_2d(&self) -> [[&Tile; 8]; 8]{
+        let mut board = [[&Tile::Empty; 8]; 8];
+
+        for rank in 0..8 {
+            for file in 0..8 {
+                let tile = self.get_tile_from_pos(Pos {
+                    rank: rank as i32,
+                    file: file as i32,
+                }).unwrap(); // Very bad!
+                match tile {
+                    tile!(_) => (),
+                    _ => board[rank][file] = tile,
+                }
+            }
+        }
+
+        board
+    }
+
+    fn get_pos_from_str(str: &str) -> Option<(Option<Pos>, Option<Pos>)> {
+        let mut pos_pair: (Option<Pos>, Option<Pos>) = (None, None);
+
+        let binding = str.split_whitespace().collect::<String>().to_lowercase();
+        let mut iter = binding.chars();
+
+        let origin_file = match iter.next()? {
+            'a' => 0,
+            'b' => 1,
+            'c' => 2,
+            'd' => 3,
+            'e' => 4,
+            'f' => 5,
+            'g' => 6,
+            'h' => 7,
+            _ => return None,
+        };
+
+        let origin_rank = match iter.next()? {
+            '1' => 0,
+            '2' => 1,
+            '3' => 2,
+            '4' => 3,
+            '5' => 4,
+            '6' => 5,
+            '7' => 6,
+            '8' => 7,
+            _ => return None,
+        };
+
+        let destination_file = match iter.next()? {
+            'a' => 0,
+            'b' => 1,
+            'c' => 2,
+            'd' => 3,
+            'e' => 4,
+            'f' => 5,
+            'g' => 6,
+            'h' => 7,
+            _ => return None,
+        };
+
+        let destination_rank = match iter.next()? {
+            '1' => 0,
+            '2' => 1,
+            '3' => 2,
+            '4' => 3,
+            '5' => 4,
+            '6' => 5,
+            '7' => 6,
+            '8' => 7,
+            _ => return None,
+        };
+
+        pos_pair.0 = Some(Pos {
+            file: origin_file, 
+            rank: origin_rank,
+        });
+
+        pos_pair.1 = Some(Pos {
+            file: destination_file, 
+            rank: destination_rank,
+        });
+
+        Some(pos_pair)
     }
 }
 
@@ -125,7 +252,7 @@ impl std::fmt::Debug for Game {
                     file,
                 };
 
-                let tile = match self.get_tile(pos) {
+                let tile = match self.get_tile_from_pos(pos) {
                     Some(t) => match t {
                         tile!(P) => "P ",
                         tile!(N) => "N ",
@@ -169,11 +296,11 @@ mod tests {
 
     #[test]
     fn board() {
-        let mut game = Game::from_fen("8/8/8/pppppppp/PPPPPPPP/8/8/8 w KQkq - 0 1").unwrap();
+        let mut game = Game::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
 
-        game.ply( Pos {
+        println!("{:?}", game);
 
-        });
+        game.ply_str("a2 a3");
 
         println!("{:?}", game);
     }

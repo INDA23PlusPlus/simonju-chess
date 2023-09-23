@@ -20,6 +20,21 @@ pub struct Ply {
     pub destination: usize,
 }
 
+impl std::fmt::Display for Ply {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut string = String::new();
+
+        let origin_string = Board::index_to_string(self.origin);
+        let destination_string = Board::index_to_string(self.destination);
+
+        string.push_str(origin_string.as_str());
+        string.push(' ');
+        string.push_str(destination_string.as_str());
+
+        write!(f, "{}", string)
+    }
+}
+
 impl Ply {
     pub(crate) fn to_string(&self) -> String {
         let mut string = String::new();
@@ -48,7 +63,7 @@ impl Game {
                     tile!(B) => plys.append(&mut self.gen_bishop_plys(index)),
                     tile!(R) => plys.append(&mut self.gen_rook_plys(index)),
                     tile!(Q) => plys.append(&mut self.gen_queen_plys(index)),
-                    tile!(K) => (),
+                    tile!(K) => plys.append(&mut self.gen_king_plys(index)),
                     _ => (),
                 }
             }
@@ -59,7 +74,7 @@ impl Game {
                     tile!(b) => plys.append(&mut self.gen_bishop_plys(index)),
                     tile!(r) => plys.append(&mut self.gen_rook_plys(index)),
                     tile!(q) => plys.append(&mut self.gen_queen_plys(index)),
-                    tile!(k) => (),
+                    tile!(k) => plys.append(&mut self.gen_king_plys(index)),
                     _ => (),
                 }
             }
@@ -286,13 +301,36 @@ impl Game {
         plys
     }
 
-    fn gen_king_plys() {
-        todo!();
+    fn gen_king_plys(&self, origin: usize) -> Vec<Ply> {
+        let king_delta = [-11, -10, -9, -1, 1, 9, 10, 11];
+
+        let mut plys: Vec<Ply> = Vec::new();
+
+        for destination in king_delta.iter().map(|i| (i + origin as isize) as usize) {
+            match self.board.get_tile(destination) {
+                Some(tile) => match tile {
+                    tile!(white) => match self.player {
+                        Color::White => (),
+                        Color::Black => plys.push(Ply{ origin, destination }),
+                    },
+                    tile!(black) => match self.player {
+                        Color::White => plys.push(Ply{ origin, destination }),
+                        Color::Black => (),
+                    },
+                    tile!(.) => plys.push(Ply{ origin, destination }),
+                    tile!(_) => (),
+                } 
+                _ => (),
+            }
+        }
+
         // Step
         // Castling
         /* +9 +10+11
          * -1  O +1
          * -11-10-9
          */
+
+        plys
     }
 }
