@@ -15,6 +15,8 @@
 //! To get all valid plys for a specific piece (based on the current player), use [`Game::get_plys_from_pos`].
 //! 
 //! To make a ply, use [`Game::ply`].
+//! 
+//! To test for checkmate, use [`Game::is_checkmate`].
 
 mod game;
 pub use crate::game::*;
@@ -49,7 +51,6 @@ pub fn default_game() -> Game {
 /// Default position:
 /// ```
 /// let game = api::fen_game("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
-/// };
 /// ```
 /// 
 /// Empty board:
