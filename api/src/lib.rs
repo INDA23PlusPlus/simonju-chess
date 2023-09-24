@@ -1,3 +1,21 @@
+//! This is a chess library lacking many important features. Use at your own risk!
+//! 
+//! To start a game, create a [`Game`] object.
+//! ```
+//! // Creates a game in starting position.
+//! let mut game = api::default_game();
+//! ```
+//! 
+//! To get the current board state, use [`Game::get_board_2d`].
+//! 
+//! To get the current player, use [`Game::get_player`].
+//! 
+//! To get all valid plys for the current player, use [`Game::get_plys`].
+//! 
+//! To get all valid plys for a specific piece (based on the current player), use [`Game::get_plys_from_pos`].
+//! 
+//! To make a ply, use [`Game::ply`].
+
 mod game;
 pub use crate::game::*;
 
@@ -13,7 +31,7 @@ pub use crate::board::*;
 /// 
 /// Basic Use:
 /// ```
-/// let game = api::default_game();
+/// let mut game = api::default_game();
 /// ```
 pub fn default_game() -> Game {
     match Game::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {

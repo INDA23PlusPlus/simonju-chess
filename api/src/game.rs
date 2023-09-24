@@ -18,6 +18,7 @@ pub struct Game {
 }
 
 impl Game {
+    /// Constructs a new Game object.
     pub(crate) fn new() -> Self {
         let mut game = Self {
             board: Board::new(),
@@ -31,6 +32,7 @@ impl Game {
         game
     }
 
+    /// Resets the game to the default state: empty board.
     pub(crate) fn renew(&mut self) {
         let new_game = Self::new();
 
@@ -40,6 +42,27 @@ impl Game {
         self.en_passant = new_game.en_passant;
     }
 
+    /// Used each turn to make plys with positions (see [`Pos`]) as arguments.
+    /// 
+    /// The method moves a piece, updates the turn,
+    /// and generates a new set of legal plys. If the ply is illegal it will return an error 
+    /// that should be handled. If you wish to make plys using something resembling algebraic notation,
+    /// consider using [`ply_str`] instead.
+    ///
+    /// [`ply_str`]: `Game::ply_str`
+    /// 
+    /// # Examples
+    /// 
+    /// Basic use:
+    /// ```
+    /// let mut game = api::default_game();
+    /// // "a2 to a4"
+    /// match game.ply(Pos {0, 1}, Pos {0, 3}) {
+    ///     Ok(_) => (),
+    ///     Err(_) => (), // Handle error.
+    /// }
+    /// 
+    /// ```
     pub fn ply(&mut self, origin: Pos, destination: Pos) -> Result<(), PlyError> {
         let origin_index = Board::get_index(origin);
         let destination_index = Board::get_index(destination);
@@ -63,8 +86,6 @@ impl Game {
             Err(_) => return Err(PlyError::Unknown),
         }
 
-        self.gen_plys();
-
         self.player = match self.player {
             Color::White => Color::Black,
             Color::Black => Color::White,
@@ -75,6 +96,35 @@ impl Game {
         return Ok(());
     }
 
+    /// Used each turn to make plys using text.
+    /// 
+    /// Valid arguments resembles algebraic notation (a1a2 etc.), 
+    /// but only positions are allowed meaning piece names cannot be used.
+    /// For more details or if wishing to use positions (see[`Pos`]), see [`ply`].
+    ///
+    /// [`ply`]: `Game::ply`
+    /// 
+    /// # Examples
+    /// 
+    /// Basic use:
+    /// ```
+    /// let mut game = api::default_game();
+    /// // "a2 to a4"
+    /// match game.ply_str("a2a4") {
+    ///     Ok(_) => (),
+    ///     Err(_) => (), // Handle error.
+    /// }
+    /// ```
+    /// 
+    /// Use with whitespace:
+    /// ```
+    /// let mut game = api::default_game();
+    /// // "a2 to a4"
+    /// match game.ply_str("   a2     a4   ") {
+    ///     Ok(_) => (),
+    ///     Err(_) => (), // Handle error.
+    /// }
+    /// ```
     pub fn ply_str(&mut self, str: &str) -> Result<(), PlyError> {
         let ply = Self::get_pos_from_str(str);
         match ply {
@@ -95,10 +145,20 @@ impl Game {
         }
     }
 
+    /// Returns all valid plys available to the current player.
     pub fn get_plys(&self) -> &Vec<Ply> {
         &self.plys
     }
 
+    /// Returns all valid plys available from the chosen tile position (see [`Pos`]).
+    /// 
+    /// Returns an empty vector if no valid plys (see [`Ply`]) are available from the chosen spot,
+    /// or if the current player's color (see [`Color`]) does not match the chosen piece's color. 
+    /// Use cases include displaying valid plys for a piece when hovering the mouse over it.
+    /// If you wish to use something resembling algebraic notation instead of positions, 
+    /// consider using [`get_plys_from_str`] instead.
+    /// 
+    /// [`get_plys_from_str`]: `Game::get_plys_from_str
     pub fn get_plys_from_pos(&self, pos: Pos) -> Vec<&Ply> {
         let mut plys = Vec::new();
 
@@ -111,6 +171,11 @@ impl Game {
         plys
     }
 
+    /// Returns all valid plys available from the chosen tile position passed as a string slice.
+    /// 
+    /// For more details or if wishing to use positions (see [`Pos`]) instead, see [`get_plys_from_pos`].
+    /// 
+    /// [`get_plys_from_pos`]: `Game::get_plys_from_pos
     pub fn get_plys_from_str(&self, str: &str) -> Vec<&Ply> {
         self.get_plys_from_pos(match Self::get_pos_from_str(str) {
             Some(pos_pos) => match pos_pos.0 {
@@ -121,10 +186,14 @@ impl Game {
         })
     }
 
+    /// Returns the current player's color (see [`Color`]).
     pub fn get_player(&self) -> &Color {
         &self.player
     }
 
+    /// Returns the tile at the specified position (see [`Pos`]).
+    /// 
+    /// 
     pub fn get_tile_from_pos(&self, pos: Pos) -> Option<&Tile> {
         match self.board.get_tile(Board::get_index(pos))? {
             tile!(_) => None,

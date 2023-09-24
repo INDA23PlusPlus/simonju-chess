@@ -188,7 +188,7 @@ impl Board {
         board
     }
 
-    /// Empties the board.
+    /// Clears the board of any lingering pieces.
     pub(crate) fn empty(&mut self) {
         self.tiles = Self::new().tiles;
     }
