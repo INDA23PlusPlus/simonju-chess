@@ -10,6 +10,7 @@ pub use ply_gen::*;
 /// Represents a game of chess.
 /// 
 /// All user interaction should be handled through Game objects.
+#[derive(Clone)]
 pub struct Game {
     board: Board,
     player: Color,
@@ -26,8 +27,6 @@ impl Game {
             plys: Vec::new(),
             en_passant: None,
         };
-
-        game.gen_plys();
 
         game
     }
@@ -193,7 +192,9 @@ impl Game {
 
     /// Returns the tile at the specified position (see [`Pos`]).
     /// 
+    /// Use [`get_tile_from_str`] if wishing to used string based positions.
     /// 
+    /// [`get_tile_from_str`]: `Game::get_tile_from_str`
     pub fn get_tile_from_pos(&self, pos: Pos) -> Option<&Tile> {
         match self.board.get_tile(Board::get_index(pos))? {
             tile!(_) => None,
@@ -201,10 +202,16 @@ impl Game {
         }
     }
 
+    /// Returns the tile at the specified algebraic notation-based position.
+    /// 
+    /// Use [`get_tile_from_pos`] if wishing to positions (see [`Pos`]).
+    /// 
+    /// [`get_tile_from_pos`]: `Game::get_tile_from_pos`
     pub fn get_tile_from_str(&self, str: &str) -> Option<&Tile> {
         self.get_tile_from_pos(Self::get_pos_from_str(str)?.0?)
     }
 
+    /// Returns all the tiles on the board as a one-dimensional array.
     pub fn get_board_1d(&self) -> [&Tile; 64] {
         let mut board = [&Tile::Empty; 64];
 
@@ -219,7 +226,7 @@ impl Game {
         board
     }
     
-    /// 
+    /// Returns all the tiles on the board as a two-dimensional array.
     pub fn get_board_2d(&self) -> [[&Tile; 8]; 8]{
         let mut board = [[&Tile::Empty; 8]; 8];
 

@@ -127,7 +127,7 @@ pub struct Pos {
 
 
 /// Represents the chessboard as a one dimensional array.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Board {
     tiles: [Tile; BOARD_WIDTH * BOARD_HEIGHT],
 }

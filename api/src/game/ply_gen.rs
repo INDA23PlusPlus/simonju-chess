@@ -52,35 +52,13 @@ impl Ply {
 
 impl Game {
     pub(crate) fn gen_plys(&mut self) {
-        let mut plys: Vec<Ply> = Vec::new();
+        let mut plys = self.gen_pseudo_legal_plys();
 
-        // Pseudo-legal ply generation.
-        match self.player {
-            Color::White => for (index, tile) in self.board.get_tiles().iter().enumerate() {
-                match tile {
-                    tile!(P) => plys.append(&mut self.gen_pawn_plys(index)),
-                    tile!(N) => plys.append(&mut self.gen_knight_plys(index)),
-                    tile!(B) => plys.append(&mut self.gen_bishop_plys(index)),
-                    tile!(R) => plys.append(&mut self.gen_rook_plys(index)),
-                    tile!(Q) => plys.append(&mut self.gen_queen_plys(index)),
-                    tile!(K) => plys.append(&mut self.gen_king_plys(index)),
-                    _ => (),
-                }
-            }
-            Color::Black => for (index, tile) in self.board.get_tiles().iter().enumerate() {
-                match tile {
-                    tile!(p) => plys.append(&mut self.gen_pawn_plys(index)),
-                    tile!(n) => plys.append(&mut self.gen_knight_plys(index)),
-                    tile!(b) => plys.append(&mut self.gen_bishop_plys(index)),
-                    tile!(r) => plys.append(&mut self.gen_rook_plys(index)),
-                    tile!(q) => plys.append(&mut self.gen_queen_plys(index)),
-                    tile!(k) => plys.append(&mut self.gen_king_plys(index)),
-                    _ => (),
-                }
-            }
-        }
+        self.plys.clear();
+        self.plys = plys.clone();
 
-        // Legal ply generation through pruning illegal plys.
+        plys = self.gen_legal_plys(plys);
+
         self.plys.clear();
         self.plys.append(&mut plys);
     }
@@ -332,5 +310,115 @@ impl Game {
          */
 
         plys
+    }
+
+    fn gen_pseudo_legal_plys(&self) -> Vec<Ply> {
+        let mut plys: Vec<Ply> = Vec::new();
+
+        match self.player {
+            Color::White => for (index, tile) in self.board.get_tiles().iter().enumerate() {
+                match tile {
+                    tile!(P) => plys.append(&mut self.gen_pawn_plys(index)),
+                    tile!(N) => plys.append(&mut self.gen_knight_plys(index)),
+                    tile!(B) => plys.append(&mut self.gen_bishop_plys(index)),
+                    tile!(R) => plys.append(&mut self.gen_rook_plys(index)),
+                    tile!(Q) => plys.append(&mut self.gen_queen_plys(index)),
+                    tile!(K) => plys.append(&mut self.gen_king_plys(index)),
+                    _ => (),
+                }
+            }
+            Color::Black => for (index, tile) in self.board.get_tiles().iter().enumerate() {
+                match tile {
+                    tile!(p) => plys.append(&mut self.gen_pawn_plys(index)),
+                    tile!(n) => plys.append(&mut self.gen_knight_plys(index)),
+                    tile!(b) => plys.append(&mut self.gen_bishop_plys(index)),
+                    tile!(r) => plys.append(&mut self.gen_rook_plys(index)),
+                    tile!(q) => plys.append(&mut self.gen_queen_plys(index)),
+                    tile!(k) => plys.append(&mut self.gen_king_plys(index)),
+                    _ => (),
+                }
+            }
+        }
+
+        plys
+    }
+
+    fn gen_legal_plys(&self, mut pseudo_legal_plys: Vec<Ply>) -> Vec<Ply> {
+        let mut legal_plys = vec![];
+        for ply in pseudo_legal_plys {
+            if self.is_legal_ply(ply) {
+                legal_plys.push(ply);
+            }
+        }
+
+        legal_plys
+    }
+
+    fn is_legal_ply(&self, ply: Ply) -> bool {
+        let mut game = self.clone();
+        let origin = Board::get_pos(ply.origin);
+        let destination = Board::get_pos(ply.destination);
+
+        // Make ply and update state of the copied game.
+        if let Err(_) = game.test_ply(origin, destination) {
+            return false;
+        }
+
+        let opponent_king_tile = match game.player {
+            Color::White => tile!(k),
+            Color::Black => tile!(K),
+        };
+
+        let mut opponent_king_pos = Pos { rank: -1, file: -1 };
+        'king_search: for rank in 0..8 {
+            for file in 0..8 {
+                opponent_king_pos = Pos { rank, file };
+                // Bad code.
+                if opponent_king_tile == *game.get_tile_from_pos(opponent_king_pos).unwrap() {
+                    break 'king_search
+                }
+            }
+        }
+        
+        for ply in game.get_plys() {
+            if Board::get_pos(ply.destination) == opponent_king_pos {
+                return false
+            }
+        }
+
+        true
+    }
+
+    fn test_ply(&mut self, origin: Pos, destination: Pos) -> Result<(), PlyError> {
+        let origin_index = Board::get_index(origin);
+        let destination_index = Board::get_index(destination);
+        let ply = Ply {
+            origin: origin_index,
+            destination: destination_index,
+        };
+
+        if !(self.plys.contains(&ply)) {
+            println!("Invalid Ply: {}", ply);
+            return Err(PlyError::InvalidPly);
+        }
+
+        let tile = match self.board.rem_tile(origin_index) {
+            Ok(t) => t,
+            Err(_) => return Err(PlyError::Unknown),
+        };
+
+        match self.board.set_tile(destination_index, tile) {
+            Ok(_) => (),
+            Err(_) => return Err(PlyError::Unknown),
+        }
+
+        self.player = match self.player {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        };
+
+        self.gen_pseudo_legal_plys();
+
+        return Ok(());
     }
 }

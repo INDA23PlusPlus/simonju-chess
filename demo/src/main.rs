@@ -2,7 +2,6 @@ use api::*;
 use std::io::{self, stdin};
 
 fn main() {
-    /*
     // Preferred method for creating a new game.
     let mut game = api::default_game();
 
@@ -64,5 +63,4 @@ fn main() {
             }
         }
     }
-    */
 }
