@@ -190,6 +190,10 @@ impl Game {
         &self.player
     }
 
+    pub fn is_checkmate(&self) -> bool {
+        self.plys.is_empty()
+    }
+
     /// Returns the tile at the specified position (see [`Pos`]).
     /// 
     /// Use [`get_tile_from_str`] if wishing to used string based positions.

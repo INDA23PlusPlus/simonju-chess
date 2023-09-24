@@ -54,13 +54,11 @@ impl Game {
     pub(crate) fn gen_plys(&mut self) {
         let mut plys = self.gen_pseudo_legal_plys();
 
-        self.plys.clear();
         self.plys = plys.clone();
 
         plys = self.gen_legal_plys(plys);
 
-        self.plys.clear();
-        self.plys.append(&mut plys);
+        self.plys = plys.clone();
     }
 
     fn gen_pawn_plys(&self, origin: usize) -> Vec<Ply> {
@@ -343,8 +341,11 @@ impl Game {
         plys
     }
 
-    fn gen_legal_plys(&self, mut pseudo_legal_plys: Vec<Ply>) -> Vec<Ply> {
+    fn gen_legal_plys(&self, pseudo_legal_plys: Vec<Ply>) -> Vec<Ply> {
         let mut legal_plys = vec![];
+
+        println!("{:?}", self);
+
         for ply in pseudo_legal_plys {
             if self.is_legal_ply(ply) {
                 legal_plys.push(ply);
@@ -363,6 +364,8 @@ impl Game {
         if let Err(_) = game.test_ply(origin, destination) {
             return false;
         }
+
+        println!("{:?}", game);
 
         let opponent_king_tile = match game.player {
             Color::White => tile!(k),
@@ -417,7 +420,7 @@ impl Game {
             Color::Black => Color::White,
         };
 
-        self.gen_pseudo_legal_plys();
+        self.plys = self.gen_pseudo_legal_plys();
 
         return Ok(());
     }

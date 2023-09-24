@@ -3,7 +3,7 @@ use std::io::{self, stdin};
 
 fn main() {
     // Preferred method for creating a new game.
-    let mut game = api::default_game();
+    let mut game = api::fen_game("8/8/8/k7/8/4K3/8/8 w - - 0 1").unwrap();
 
     loop {
         println!("Board");

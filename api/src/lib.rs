@@ -42,16 +42,19 @@ pub fn default_game() -> Game {
 
 /// Returns a [`Game`] object representing an arbitrary position in chess.
 /// 
+/// If the fen string is incorrect in some way, it will return. 
+/// 
 /// # Examples
 /// 
 /// Default position:
 /// ```
-/// let game = api::fen_game("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+/// let game = api::fen_game("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
+/// };
 /// ```
 /// 
 /// Empty board:
 /// ```
-/// let game = api::fen_game("8/8/8/8/8/8/8/8 w - - 0 1");
+/// let game = api::fen_game("8/8/8/8/8/8/8/8 w - - 0 1").unwrap();
 /// ```
 pub fn fen_game(fen: &str) -> Result<Game, FenParseError> {
     Game::from_fen(fen)
